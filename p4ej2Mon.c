@@ -1,3 +1,9 @@
+/*
+Para usar este programa se lo debe ejecutar con privilegios root, para eso desde
+la consola ejecutar "sudo -s" o ejecutarlo con sudo ./p4ej2Mon
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <error.h>

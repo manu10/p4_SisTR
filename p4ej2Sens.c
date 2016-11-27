@@ -1,9 +1,3 @@
-/*
-     add_client.c: Client program to take user input comprising
-                   of numbers, send request message to add_server
-                   and receive server's response
-
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <error.h>
@@ -16,11 +10,10 @@
 #include <time.h>
 #include <memory.h>
 
-#define MONITOR_FIFO "/tmp/fifo_Monitor"
-#define SENSOR_FIFO "/tmp/fifo_Sensor"
+#define MONITOR_FIFO "/tmp/MONITOR_FIFO"
 
-char my_fifo_name [128];
-char buf1 [512], buf2 [1024];
+// char my_fifo_name [128];
+char buf1 [512];
 
 FILE *temps_file;
 struct timespec time_nanos = {0, 10000000L};
@@ -29,6 +22,7 @@ int main(int argc,char*argv[]){
   int fd_monitor;
   char *temp,*nanos;
   long nano_seconds;
+  const char *corte="F";
 
   //Controla los argumentos al programa
   if (argc != 2){
@@ -43,29 +37,37 @@ int main(int argc,char*argv[]){
   }
 
   // make Sensor fifo
-  if (mkfifo (SENSOR_FIFO, 0664) == -1)
-      perror ("mkfifo");
+  // if (mkfifo (SENSOR_FIFO, 0664) == -1)
+  //     perror ("mkfifo");
+  if (mkfifo (MONITOR_FIFO, 0664) == -1)
+          perror ("mkfifo");
 
   while (!feof(temps_file)) {
 
-    // // get user input
-    // printf ("Type numbers to be added: ");
+    // // get data from file
     if (fgets(buf1, sizeof (buf1), temps_file) == NULL)
         break;
     nanos = strtok(buf1, "\t");
-    temp = strtok(NULL, "\t");
+    temp = strtok(NULL, "\n");
+    printf("temp ANTES de strcat:\"%s\"\n",temp );
+    strcat(temp," ");
+    printf("temp DESPUES de strcat: \"%s\"\n",temp );
+
+    printf("\nnanos: --%s-- \n",nanos);
+    printf("\ntemp: --%s-- \n",temp);
 
     nano_seconds=(long)atoi(nanos);
-
-    nanosleep(&time_nanos, NULL);
+    time_nanos.tv_nsec=nano_seconds;
+    nanosleep(&time_nanos, NULL);//TODO: PROBAR CREO QUE DEBO CAMBIARLO
     // send message to Monitor
     if ((fd_monitor = open (MONITOR_FIFO, O_WRONLY)) == -1) {
         perror ("open: Monitor fifo");
         break;
     }
 
-    if (write (fd_monitor, temp, strlen (temp)) != strlen (temp)) {
-        perror ("write");
+    printf("Longitud de temp leida: %ld\n", strlen (temp));
+    if (write (fd_monitor, temp, strlen (temp)) != (unsigned)strlen (temp)) {
+        perror ("write problem");
          break;
     }
 
@@ -82,11 +84,12 @@ int main(int argc,char*argv[]){
 
   }
 
-  if (write (fd_monitor, "F", sizeof("F")) != strlen ("F")) {
-      perror ("write");
+  if (write (fd_monitor, (void *)corte, strlen(corte)) != (unsigned)strlen (corte)) {
+
+      perror ("write COrte");
 
   }
-
+  printf("Envio caracter de corte:\"%s\"\n",corte);
   if (close (fd_monitor) == -1) {
       perror ("close");
   }
@@ -95,6 +98,7 @@ int main(int argc,char*argv[]){
   fclose(temps_file);
   /* remove the FIFO */
   unlink(MONITOR_FIFO);
+  // unlink(SENSOR_FIFO);
 
 
   return 0;
